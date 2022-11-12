@@ -41,22 +41,23 @@ const uint8_t led_port[LED_COUNT] = {
     LED_0
 };
 
+uint8_t ddr = 0;
+uint8_t port = 0;
+
 ISR(TIM1_OVF_vect) {
     time++;
+    ddr = led_ddr[time % LED_COUNT];
+    port = led_port[time % LED_COUNT];
+}
 
-    uint8_t idx = time % LED_COUNT;
-
-    PORTB = led_port[idx];
-    DDRB = led_ddr[idx];
-    /*if(time % 4 == 0) {
-        PORTB |= LED_0;
-    } else {
-        PORTB &= ~LED_0;
-    }*/
+ISR(TIM0_OVF_vect) {
+    PORTB = port; // led_port[];
+    DDRB = ddr; // led_ddr[time % LED_COUNT];
 }
 
 ISR(TIM0_COMPA_vect) {
-
+    // PORTB = 0;
+    // DDRB = 0;
 }
 
 ISR(TIM0_COMPB_vect) {
@@ -73,15 +74,15 @@ int main() {
     // WDTCR |= (1 << WDTIE);
 
     PLLCSR &= ~(1 << PCKE);
-    TCCR1 |= (0 << CS13) | (1 << CS12) | (1 << CS11) | (1 << CS10);
+    TCCR1 |= (1 << CS13) | (0 << CS12) | (0 << CS11) | (0 << CS10);
     TCNT1 = 0;
 
-    TIMSK |= (1 << TOIE1);
+    TCCR0A = 0x00;
+    TCCR0B = (0 << CS02) | (0 << CS01) | (1 << CS00);
+    OCR0A = 220;
+    TCNT0 = 0;
 
-    // TCCR0A = 0x00;
-    // TCCR0B = 0x00;
-    // TCCR0B |= (1<<CS00)|(1<<CS02);
-    // TCNT0 = 0;
+    TIMSK |= (1 << TOIE1) | (1 << TOIE0) | (1 << OCIE0A) | (1 << OCIE0B);
 
     // MCUCR = (1 << SE); // power-down mode
 
@@ -96,13 +97,14 @@ int main() {
     while(1) {
         // cli();
 
-        if(TCNT1 > 127) {
-            // PORTB |= LED_0;
-        } else {
-            // PORTB &= ~LED_0;
-        }
+        /*_delay_ms(500);
+        time++;
+        uint8_t idx = time % LED_COUNT;
+        OCR0B = idx;
+        ddr = led_ddr[idx];
+        port = led_port[idx];
+        */
 
-        // _delay_ms(500);
         // PORTB ^= LED_0;
         /*
         if(state == StateShutdown || state == StateOff) {
