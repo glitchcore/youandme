@@ -21,13 +21,38 @@
 
 uint32_t time = 0;
 
+#define LED_COUNT 6
+
+const uint8_t led_ddr[LED_COUNT] = {
+    LED_2 | LED_1,
+    LED_2 | LED_1,
+    LED_1 | LED_0,
+    LED_1 | LED_0,
+    LED_2 | LED_0,
+    LED_2 | LED_0,
+};
+
+const uint8_t led_port[LED_COUNT] = {
+    LED_2,
+    LED_1,
+    LED_1,
+    LED_0,
+    LED_2,
+    LED_0
+};
+
 ISR(TIM1_OVF_vect) {
     time++;
-    if(time % 4 == 0) {
+
+    uint8_t idx = time % LED_COUNT;
+
+    PORTB = led_port[idx];
+    DDRB = led_ddr[idx];
+    /*if(time % 4 == 0) {
         PORTB |= LED_0;
     } else {
         PORTB &= ~LED_0;
-    }
+    }*/
 }
 
 ISR(TIM0_COMPA_vect) {
@@ -46,8 +71,6 @@ ISR(WDT_vect){
 int main() {
     // wdt_enable(WDTO_500MS);
     // WDTCR |= (1 << WDTIE);
-
-    DDRB = LED_0; // | RED | PWREN;
 
     PLLCSR &= ~(1 << PCKE);
     TCCR1 |= (0 << CS13) | (1 << CS12) | (1 << CS11) | (1 << CS10);
