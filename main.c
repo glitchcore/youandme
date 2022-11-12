@@ -57,33 +57,75 @@ uint8_t ddr_b = 0;
 uint8_t port_b = 0;
 
 uint32_t get_time() {
+    // get time base + timer offset (2 ticks per second)
     return time + TCNT1 / 2;
 }
 
 bool run = false;
 
+void set_led_a(LedColor color, uint8_t value);
+void set_led_b(LedColor color, uint8_t value);
+
 ISR(TIM1_OVF_vect) {
-    // calculate time
+    // increment time by 128 seconds (timer period)
     time += 128;
 
     // just for test
-    ddr_a = led_ddr[(time/128) % LedCount];
-    port_a = led_port[(time/128) % LedCount];
+    set_led_a((time/128) % LedCount, 120);
 }
 
+// start led a
 ISR(TIM0_OVF_vect) {
     PORTB = port_a;
     DDRB = ddr_a;
 }
 
+// start led b
 ISR(TIM0_COMPA_vect) {
     // PORTB = port_b;
     // DDRB = ddr_b;
 }
 
+// sw off all leds
 ISR(TIM0_COMPB_vect) {
     // PORTB = 0;
     // DDRB = 0;
+}
+
+void set_led_a(LedColor color, uint8_t value) {
+    if(value == 0) {
+        TCCR0B = 0;
+        return;
+    } else {
+        TCCR0B = (0 << CS02) | (0 << CS01) | (1 << CS00);
+    }
+
+    if(value > 120) value = 120;
+    if(value < 10) value = 10;
+
+    uint8_t b_value = OCR0B - OCR0A;
+    OCR0A = value;
+    OCR0B = OCR0A + b_value;
+
+    ddr_a = led_ddr[color];
+    port_a = led_port[color];
+}
+
+void set_led_b(LedColor color, uint8_t value) {
+    if(value == 0) {
+        TCCR0B = 0;
+        return;
+    } else {
+        TCCR0B = (0 << CS02) | (0 << CS01) | (1 << CS00);
+    }
+    
+    if(value > 120) value = 120;
+    if(value < 10) value = 10;
+
+    OCR0B = OCR0A + value;
+
+    ddr_b = led_ddr[color];
+    port_b = led_port[color];
 }
 
 int main() {
@@ -92,19 +134,12 @@ int main() {
     TCNT1 = 0;
 
     TCCR0A = 0x00;
-    TCCR0B = (0 << CS02) | (0 << CS01) | (1 << CS00);
     OCR0A = 220;
     TCNT0 = 0;
 
     TIMSK |= (1 << TOIE1) | (1 << TOIE0) | (1 << OCIE0A) | (1 << OCIE0B);
 
     // MCUCR = (1 << SE); // power-down mode
-
-    /*
-    PORTB |= WHITE;
-    _delay_ms(1);
-    PORTB &= ~WHITE;
-    */
 
     sei();
 
@@ -119,28 +154,6 @@ int main() {
         port = led_port[idx];
         */
 
-        // PORTB ^= LED_0;
-        /*
-        if(state == StateShutdown || state == StateOff) {
-            state = StateOff;
-            PORTB = 0;
-
-            TCCR0B = 0;
-            TIMSK0 = 0;
-
-            MCUCR |= (1 << SM1); // power down
-        } else {
-            PORTB |= PWREN;
-
-            // timer
-            // set prescaler to 8 (586 Hz)
-            TCCR0B = (0 << CS02) | (1 << CS01) | (0 << CS00);
-            // enable Timer Overflow irq + compare A/B irq
-            TIMSK0 = (1 << TOIE0) | (1 << OCIE0A) | (1 << OCIE0B);
-
-            MCUCR &= ~(1 << SM1); // power idle
-        }
-        */
         // sei();
         // __asm("sleep");
     }
