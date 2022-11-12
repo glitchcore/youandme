@@ -20,10 +20,20 @@
 #define POWER_DOWN (1<<SM1)
 
 uint32_t time = 0;
+uint16_t seed = 0xDEAD;
 
-#define LED_COUNT 6
+typedef enum {
+    Red0 = 0,
+    Green0,
+    Blue0,
+    Red1,
+    Green1,
+    Blue1,
 
-const uint8_t led_ddr[LED_COUNT] = {
+    LedCount
+} LedColor;
+
+const uint8_t led_ddr[LedCount] = {
     LED_2 | LED_1,
     LED_2 | LED_1,
     LED_1 | LED_0,
@@ -32,7 +42,7 @@ const uint8_t led_ddr[LED_COUNT] = {
     LED_2 | LED_0,
 };
 
-const uint8_t led_port[LED_COUNT] = {
+const uint8_t led_port[LedCount] = {
     LED_2,
     LED_1,
     LED_1,
@@ -41,38 +51,42 @@ const uint8_t led_port[LED_COUNT] = {
     LED_0
 };
 
-uint8_t ddr = 0;
-uint8_t port = 0;
+uint8_t ddr_a = 0;
+uint8_t port_a = 0;
+uint8_t ddr_b = 0;
+uint8_t port_b = 0;
+
+uint32_t get_time() {
+    return time + TCNT1 / 2;
+}
+
+bool run = false;
 
 ISR(TIM1_OVF_vect) {
-    time++;
-    ddr = led_ddr[time % LED_COUNT];
-    port = led_port[time % LED_COUNT];
+    // calculate time
+    time += 128;
+
+    // just for test
+    ddr_a = led_ddr[(time/128) % LedCount];
+    port_a = led_port[(time/128) % LedCount];
 }
 
 ISR(TIM0_OVF_vect) {
-    PORTB = port; // led_port[];
-    DDRB = ddr; // led_ddr[time % LED_COUNT];
+    PORTB = port_a;
+    DDRB = ddr_a;
 }
 
 ISR(TIM0_COMPA_vect) {
+    // PORTB = port_b;
+    // DDRB = ddr_b;
+}
+
+ISR(TIM0_COMPB_vect) {
     // PORTB = 0;
     // DDRB = 0;
 }
 
-ISR(TIM0_COMPB_vect) {
-
-}
-
-
-ISR(WDT_vect){
-    // WDTCR |= (1 << WDTIE);
-}
-
 int main() {
-    // wdt_enable(WDTO_500MS);
-    // WDTCR |= (1 << WDTIE);
-
     PLLCSR &= ~(1 << PCKE);
     TCCR1 |= (1 << CS13) | (0 << CS12) | (0 << CS11) | (0 << CS10);
     TCNT1 = 0;
