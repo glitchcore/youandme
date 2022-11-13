@@ -4,19 +4,47 @@ import threading
 
 pin_pulls = [False, False]
 
+
 def read_pin():
     return int(pin_pulls[0] or pin_pulls[1])
+
 
 def pull_pin(n, pull):
     global pin_pulls
     pin_pulls[n] = pull
 
+
 statuses = [None, None]
+
+
 def checkin(n, status):
     global statuses
     statuses[n] = status
 
+
 TIME_BASE = 0.002
+
+MIN_LEN_ACTIVE_SIGNAL = 4
+
+
+def is_get_master_signal(pin_states):
+    result = False
+    signal_length = 0
+    max_signal_length = 0
+
+    for i in range(len(pin_states)):
+        if pin_states[i] == 1:
+            signal_length += 1
+        if pin_states[i] == 0 or i == len(pin_states) - 1:
+            if signal_length > max_signal_length:
+                max_signal_length = signal_length
+            signal_length = 0
+
+    if max_signal_length >= MIN_LEN_ACTIVE_SIGNAL:
+        result = True
+
+    return result
+
 
 def actor(*args):
     n = args[0]
@@ -55,7 +83,10 @@ def actor(*args):
                 pin_states.append(read_pin())
                 sleep(TIME_BASE * 4)
             print(n, "result:", pin_states)
-            if sum(pin_states) > 4:
+            # make magicanian
+            if is_get_master_signal(pin_states):
+                # old logic
+                # if sum(pin_states) > 4:
                 print(n, "get slave role")
                 for _ in range(10):
                     pull_pin(n, True)
@@ -65,6 +96,7 @@ def actor(*args):
                 checkin(n, 0)
                 break
         sleep(random() * TIME_BASE * 3)
+
 
 while True:
     statuses = [None, None]
