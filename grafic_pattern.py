@@ -44,22 +44,24 @@ def get_colors_list(key):
     return result_list
 
 
+previous_delay = 0
 def get_delays_list(key):
-    previous_delay = GLOBAL_DELAY
+    global previous_delay
     # mod looks very predictable
     result = (key + previous_delay) % 20
+    previous_delay = result
     return result
 
 
-def make_current_color_type():
+def make_current_color_type(colors):
     color_list = []
 
     for i in range(6):
-        color_list.append(( (r * GLOBAL_COLORS[i]) / 255 for r in LEDS[i] ))
+        color_list.append(( (r * colors[i]) / 255 for r in LEDS[i] ))
 
     return color_list
 
-
+'''
 if __name__ == "__main__":
     s = turtle.getscreen()
     t = turtle.Turtle()
@@ -70,13 +72,14 @@ if __name__ == "__main__":
 
     while time() - time_start < TIME_FOR_SEANS:
         GLOBAL_COLORS = get_colors_list(key_generate)
-        colors = make_current_color_type()
-        GLOBAL_DELAY = get_delays_list(key_generate)
+        colors = make_current_color_type(GLOBAL_COLORS)
+        delay = get_delays_list(key_generate)
         print_colored_circle(colors[0], POSITIONS[0]) # R
         print_colored_circle(colors[1], POSITIONS[1]) # G
         print_colored_circle(colors[2], POSITIONS[2]) # B
         print_colored_circle(colors[3], POSITIONS[3]) # Y
         print_colored_circle(colors[4], POSITIONS[4]) # G
         print_colored_circle(colors[5], POSITIONS[5]) # B
-        sleep(TIME_BASE * GLOBAL_DELAY)
+        sleep(TIME_BASE * delay)
+'''
 
