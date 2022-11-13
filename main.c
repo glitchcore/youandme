@@ -71,7 +71,7 @@ ISR(TIM1_OVF_vect) {
     time += 128;
 
     // just for test
-    set_led_a((time/128) % LedCount, 120);
+    // set_led_a((time/128) % LedCount, 120);
 }
 
 // start led a
@@ -82,19 +82,21 @@ ISR(TIM0_OVF_vect) {
 
 // start led b
 ISR(TIM0_COMPA_vect) {
-    // PORTB = port_b;
-    // DDRB = ddr_b;
+    PORTB = port_b;
+    DDRB = ddr_b;
 }
 
 // sw off all leds
 ISR(TIM0_COMPB_vect) {
-    // PORTB = 0;
-    // DDRB = 0;
+    PORTB = 0;
+    DDRB = 0;
 }
 
+uint8_t a_value = 0;
 uint8_t b_value = 0;
+
 void set_led_a(LedColor color, uint8_t value) {
-    if(value == 0) {
+    if(value <= 10 && b_value <= 10) {
         TCCR0B = 0;
         return;
     } else {
@@ -104,6 +106,8 @@ void set_led_a(LedColor color, uint8_t value) {
     if(value > 120) value = 120;
     if(value < 10) value = 10;
 
+    a_value = value;
+
     OCR0A = value;
     OCR0B = OCR0A + b_value;
 
@@ -112,7 +116,7 @@ void set_led_a(LedColor color, uint8_t value) {
 }
 
 void set_led_b(LedColor color, uint8_t value) {
-    if(value == 0) {
+    if(value <= 10 && a_value <= 10) {
         TCCR0B = 0;
         return;
     } else {
@@ -123,7 +127,7 @@ void set_led_b(LedColor color, uint8_t value) {
     if(value < 10) value = 10;
 
     b_value = value;
-    OCR0B = OCR0A + value;
+    OCR0B = OCR0A + b_value;
 
     ddr_b = led_ddr[color];
     port_b = led_port[color];
@@ -144,7 +148,29 @@ int main() {
 
     sei();
 
+    set_led_a(Red1, 30);
+    set_led_b(Red0, 30);
+
     while(1) {
+        set_led_a(Red1, 30);
+        set_led_b(Red0, 30);
+
+        _delay_ms(500);
+
+        set_led_a(Red1, 120);
+        set_led_b(Red0, 30);
+
+        _delay_ms(500);
+
+        set_led_a(Red1, 30);
+        set_led_b(Red0, 120);
+
+        _delay_ms(500);
+
+        set_led_a(Red1, 30);
+        set_led_b(Red0, 30);
+
+        _delay_ms(500);
         // cli();
 
         /*_delay_ms(500);
