@@ -162,25 +162,26 @@ int main() {
     set_led_a(Green1, 120);
     set_led_b(Red0, 120);
 
+    LedColor color_seq[] = {
+        Red0,
+        Green1,
+        Yellow,
+        Blue1,
+        Blue0,
+        Green0
+    };
+
     while(1) {
-        set_led_a(Red0, 120);
-        set_led_b(Blue1, 120);
-        _delay_ms(100);
-        set_led_a(Green0, 120);
-        set_led_b(Red0, 120);
-        _delay_ms(100);
-        set_led_a(Blue0, 120);
-        set_led_b(Green0, 120);
-        _delay_ms(100);
-        set_led_a(Yellow, 120);
-        set_led_b(Blue0, 120);
-        _delay_ms(100);
-        set_led_a(Green1, 120);
-        set_led_b(Yellow, 120);
-        _delay_ms(100);
-        set_led_a(Blue1, 120);
-        set_led_b(Green1, 120);
-        _delay_ms(100);
+        for(uint8_t color = 0; color < LedCount; color++) {
+            uint8_t color_a = color % LedCount;
+            uint8_t color_b = (color + 1) % LedCount;
+
+            for(uint8_t i = 0; i < 120; i++) {
+                set_led_a(color_seq[color_a], 120 - i);
+                set_led_b(color_seq[color_b], i);
+                _delay_ms(1);
+            }
+        }
 
         /*set_led_a(Yellow, 120);
         set_led_b(Red0, 30);
