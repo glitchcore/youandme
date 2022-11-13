@@ -38,6 +38,7 @@ def print_colored_circle(color, position):
 def get_colors_list(key):
     result_list = []
     for i in range(6):
+        # need own implementation of random (LFSR, for example)
         random.seed((key + GLOBAL_COLORS[i])/(10 + i))
         result_list.append(random.randint(10, 250))
     return result_list
@@ -45,6 +46,7 @@ def get_colors_list(key):
 
 def get_delays_list(key):
     previous_delay = GLOBAL_DELAY
+    # mod looks very predictable
     result = (key + previous_delay) % 20
     return result
 
