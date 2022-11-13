@@ -2,8 +2,8 @@
 
 #include <avr/io.h>
 
-// #define F_CPU 32768UL
-#define F_CPU 1000000UL
+#define F_CPU 32768UL
+// #define F_CPU 1000000UL
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include <avr/wdt.h>
@@ -20,7 +20,7 @@
 #define POWER_IDLE ~(1<<SM1)
 #define POWER_DOWN (1<<SM1)
 
-uint32_t time = 0;
+volatile uint32_t time = 0;
 uint16_t seed = 0xDEAD;
 
 typedef enum {
@@ -58,21 +58,22 @@ uint8_t ddr_b = 0;
 uint8_t port_b = 0;
 
 uint32_t get_time() {
-    // get time base + timer offset (2 ticks per second)
-    return time + TCNT1 / 2;
+    // get time base + timer offset (32 ticks per second)
+    return time + TCNT1 / 32;
 }
 
-bool run = false;
+volatile bool run = false;
+volatile uint32_t next_time = 0;
 
 void set_led_a(LedColor color, uint8_t value);
 void set_led_b(LedColor color, uint8_t value);
 
 ISR(TIM1_OVF_vect) {
     // increment time by 128 seconds (timer period)
-    time += 128;
-
-    // just for test
-    // set_led_a((time/128) % LedCount, 120);
+    time += 8;
+    if(time >= next_time) {
+        run = true;
+    }
 }
 
 // start led a
@@ -96,23 +97,28 @@ ISR(TIM0_COMPB_vect) {
 uint8_t a_value = 0;
 uint8_t b_value = 0;
 
+const uint8_t LOW_MARGIN = 30;
+const uint8_t HIGH_MARGIN = 100;
+
 void set_led_a(LedColor color, uint8_t value) {
-    if(value <= 10 && b_value <= 10) {
+    if(value > HIGH_MARGIN) value = HIGH_MARGIN;
+    if(value < LOW_MARGIN) value = LOW_MARGIN;
+
+    a_value = value;
+
+    if(value <= LOW_MARGIN && b_value <= LOW_MARGIN) {
         TCCR0B = 0;
+        PORTB = 0;
+        DDRB = 0;
         return;
     } else {
         TCCR0B = (0 << CS02) | (0 << CS01) | (1 << CS00);
     }
 
-    if(value > 120) value = 120;
-    if(value < 10) value = 10;
-
-    a_value = value;
-
     OCR0A = value;
     OCR0B = OCR0A + b_value;
 
-    if(value > 10) {
+    if(value > LOW_MARGIN) {
         ddr_a = led_ddr[color];
         port_a = led_port[color];
     } else {
@@ -122,20 +128,23 @@ void set_led_a(LedColor color, uint8_t value) {
 }
 
 void set_led_b(LedColor color, uint8_t value) {
-    if(value <= 10 && a_value <= 10) {
+    if(value > HIGH_MARGIN) value = HIGH_MARGIN;
+    if(value < LOW_MARGIN) value = LOW_MARGIN;
+
+    b_value = value;
+
+    if(value <= LOW_MARGIN && a_value <= LOW_MARGIN) {
         TCCR0B = 0;
+        PORTB = 0;
+        DDRB = 0;
         return;
     } else {
         TCCR0B = (0 << CS02) | (0 << CS01) | (1 << CS00);
     }
 
-    if(value > 120) value = 120;
-    if(value < 10) value = 10;
-
-    b_value = value;
     OCR0B = OCR0A + b_value;
 
-    if(value > 10) {
+    if(value > LOW_MARGIN) {
         ddr_b = led_ddr[color];
         port_b = led_port[color];
     } else {
@@ -146,7 +155,7 @@ void set_led_b(LedColor color, uint8_t value) {
 
 int main() {
     PLLCSR &= ~(1 << PCKE);
-    TCCR1 |= (1 << CS13) | (0 << CS12) | (0 << CS11) | (0 << CS10);
+    TCCR1 |= (1 << CS13) | (0 << CS12) | (1 << CS11) | (1 << CS10);
     TCNT1 = 0;
 
     TCCR0A = 0x00;
@@ -155,12 +164,10 @@ int main() {
 
     TIMSK |= (1 << TOIE1) | (1 << TOIE0) | (1 << OCIE0A) | (1 << OCIE0B);
 
-    // MCUCR = (1 << SE); // power-down mode
+    MCUCR = (1 << SE) | (0 << SM1) | (0 << SM0); // (1 << BODS)
+    // PRR = (1 << PRTIM0) | (1 << PRUSI) | (1 << PRADC);
 
     sei();
-
-    set_led_a(Green1, 120);
-    set_led_b(Red0, 120);
 
     LedColor color_seq[] = {
         Red0,
@@ -171,18 +178,34 @@ int main() {
         Green0
     };
 
+    set_led_a(Green1, 0);
+    set_led_b(Red0, 0);
+
+    next_time = get_time() + 1;
+
     while(1) {
-        for(uint8_t color = 0; color < LedCount; color++) {
+        if(run) {
+            set_led_a((get_time()/8) % LedCount, 120);
+            _delay_ms(100);
+            set_led_a(Red0, 0);
+            set_led_b(Red0, 0);
+
+            next_time = get_time() + 8;
+            run = false;
+        } else {
+            __asm("sleep");
+        }
+        /*for(uint8_t color = 0; color < LedCount; color++) {
             uint8_t color_a = color % LedCount;
             uint8_t color_b = (color + 1) % LedCount;
 
             for(uint8_t i = 0; i < 120; i++) {
-                set_led_a(color_seq[color_a], 120 - i);
-                set_led_b(color_seq[color_b], i);
+                set_led_a(color_a, 120 - i);
+                set_led_b(color_b, i);
                 _delay_ms(1);
             }
-        }
-
+        }*/
+        
         /*set_led_a(Yellow, 120);
         set_led_b(Red0, 30);
 

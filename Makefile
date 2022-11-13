@@ -14,7 +14,7 @@ main.o: main.c
 	${CC} ${CFLAGS} -o main.o main.c
 
 flash: main.hex
-	${AVRDUDE} -p ${MCU} -P /dev/ttyUSB0 -c arduino -b 19200 -U flash:w:main.hex:i
+	${AVRDUDE} -p ${MCU} -P /dev/ttyUSB0 -c arduino -b 9600 -U flash:w:main.hex:i
 
 clean:
 	rm -f *.o *.hex
