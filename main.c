@@ -2,7 +2,8 @@
 
 #include <avr/io.h>
 
-#define F_CPU 32768UL
+// #define F_CPU 32768UL
+#define F_CPU 1000000UL
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include <avr/wdt.h>
@@ -26,7 +27,7 @@ typedef enum {
     Red0 = 0,
     Green0,
     Blue0,
-    Red1,
+    Yellow,
     Green1,
     Blue1,
 
@@ -36,19 +37,19 @@ typedef enum {
 const uint8_t led_ddr[LedCount] = {
     LED_2 | LED_1,
     LED_2 | LED_1,
-    LED_1 | LED_0,
-    LED_1 | LED_0,
     LED_2 | LED_0,
     LED_2 | LED_0,
+    LED_1 | LED_0,
+    LED_1 | LED_0,
 };
 
 const uint8_t led_port[LedCount] = {
     LED_2,
     LED_1,
-    LED_1,
-    LED_0,
     LED_2,
-    LED_0
+    LED_0,
+    LED_0,
+    LED_1
 };
 
 uint8_t ddr_a = 0;
@@ -111,8 +112,13 @@ void set_led_a(LedColor color, uint8_t value) {
     OCR0A = value;
     OCR0B = OCR0A + b_value;
 
-    ddr_a = led_ddr[color];
-    port_a = led_port[color];
+    if(value > 10) {
+        ddr_a = led_ddr[color];
+        port_a = led_port[color];
+    } else {
+        ddr_a = 0;
+        port_a = 0;
+    }
 }
 
 void set_led_b(LedColor color, uint8_t value) {
@@ -129,8 +135,13 @@ void set_led_b(LedColor color, uint8_t value) {
     b_value = value;
     OCR0B = OCR0A + b_value;
 
-    ddr_b = led_ddr[color];
-    port_b = led_port[color];
+    if(value > 10) {
+        ddr_b = led_ddr[color];
+        port_b = led_port[color];
+    } else {
+        ddr_b = 0;
+        port_b = 0;
+    }
 }
 
 int main() {
@@ -148,29 +159,44 @@ int main() {
 
     sei();
 
-    set_led_a(Red1, 30);
-    set_led_b(Red0, 30);
+    set_led_a(Green1, 120);
+    set_led_b(Red0, 120);
+
+    LedColor color_seq[] = {
+        Red0,
+        Green1,
+        Yellow,
+        Blue1,
+        Blue0,
+        Green0
+    };
 
     while(1) {
-        set_led_a(Red1, 30);
+        for(uint8_t color = 0; color < LedCount; color++) {
+            uint8_t color_a = color % LedCount;
+            uint8_t color_b = (color + 1) % LedCount;
+
+            for(uint8_t i = 0; i < 120; i++) {
+                set_led_a(color_seq[color_a], 120 - i);
+                set_led_b(color_seq[color_b], i);
+                _delay_ms(1);
+            }
+        }
+
+        /*set_led_a(Yellow, 120);
         set_led_b(Red0, 30);
 
         _delay_ms(500);
 
-        set_led_a(Red1, 120);
-        set_led_b(Red0, 30);
-
-        _delay_ms(500);
-
-        set_led_a(Red1, 30);
+        set_led_a(Yellow, 30);
         set_led_b(Red0, 120);
 
         _delay_ms(500);
 
-        set_led_a(Red1, 30);
+        set_led_a(Yellow, 30);
         set_led_b(Red0, 30);
 
-        _delay_ms(500);
+        _delay_ms(500);*/
         // cli();
 
         /*_delay_ms(500);
