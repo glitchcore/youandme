@@ -92,6 +92,7 @@ ISR(TIM0_COMPB_vect) {
     // DDRB = 0;
 }
 
+uint8_t b_value = 0;
 void set_led_a(LedColor color, uint8_t value) {
     if(value == 0) {
         TCCR0B = 0;
@@ -103,7 +104,6 @@ void set_led_a(LedColor color, uint8_t value) {
     if(value > 120) value = 120;
     if(value < 10) value = 10;
 
-    uint8_t b_value = OCR0B - OCR0A;
     OCR0A = value;
     OCR0B = OCR0A + b_value;
 
@@ -118,10 +118,11 @@ void set_led_b(LedColor color, uint8_t value) {
     } else {
         TCCR0B = (0 << CS02) | (0 << CS01) | (1 << CS00);
     }
-    
+
     if(value > 120) value = 120;
     if(value < 10) value = 10;
 
+    b_value = value;
     OCR0B = OCR0A + value;
 
     ddr_b = led_ddr[color];
