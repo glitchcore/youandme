@@ -164,8 +164,8 @@ int main() {
 
     TIMSK |= (1 << TOIE1) | (1 << TOIE0) | (1 << OCIE0A) | (1 << OCIE0B);
 
-    MCUCR = (1 << SE) | (0 << SM1) | (0 << SM0); // (1 << BODS)
-    // PRR = (1 << PRTIM0) | (1 << PRUSI) | (1 << PRADC);
+    MCUCR = (1 << SE) | (0 << SM1) | (0 << SM0);
+    PRR = (1 << PRUSI) | (1 << PRADC);
 
     sei();
 
@@ -193,6 +193,8 @@ int main() {
             next_time = get_time() + 8;
             run = false;
         } else {
+            DDRB = 0;
+            PORTB = 0xFF;
             __asm("sleep");
         }
         /*for(uint8_t color = 0; color < LedCount; color++) {
