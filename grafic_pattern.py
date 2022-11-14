@@ -70,33 +70,31 @@ SIN_TABLE = [ 127, 130, 133, 136, 139, 142, 145, 148, 151, 154, 157, 160, 163,
 def fastest_sin(x):
     return SIN_TABLE[int(x) % 256]
 
-MAX_DETUNE = 4
+MAX_DETUNE = 255
 
 class TrackParam:
     def __init__(self):
-        self.a_x = 1
-        self.a_y = 1
+        self.a_x = 255
+        self.a_y = 255
         self.detune = MAX_DETUNE/2
-        self.x = 0
+        self.x = 127
         self.y = 0
         self.phase_x = 0
         self.phase_y = 64
         
 def get_track_point(p, param):
     return (
-        param.a_x * (fastest_sin(p * param.detune + param.phase_x) - 127) / 127 + param.x,
-        param.a_y * (fastest_sin(p * (MAX_DETUNE - param.detune) + param.phase_y) - 127) / 127 + param.y
+        param.a_x * (fastest_sin(p * param.detune / 64 + param.phase_x)) / 255 + param.x,
+        param.a_y * (fastest_sin(p * (MAX_DETUNE - param.detune) / 64 + param.phase_y)) / 255 + param.y
     )
 
 def euclid(a, b):
-    return (a[0] - b[0])**2 + (a[1] - b[1])**2
+    res = (a[0] - b[0])**2 + (a[1] - b[1])**2
+    # print(res)
+    return res
 
-def orthmin(a,b):
-    return min(abs(a[0] - b[0]), abs(a[1] - b[1]))
-def orthmax(a,b):
-    return max(abs(a[0] - b[0]), abs(a[1] - b[1]))
-
-LED_RADIUS = 2
+'''
+LED_RADIUS = 127
 
 LED_POSITIONS = [
     [LED_RADIUS, 0],
@@ -106,6 +104,12 @@ LED_POSITIONS = [
     [- cos(radians(60)) * LED_RADIUS, - sin(radians(60)) * LED_RADIUS],
     [cos(radians(60)) * LED_RADIUS, - sin(radians(60)) * LED_RADIUS],
 ]
+
+LED_POSITIONS = [[int(x[0] + 128), int(x[1] + 128)] for x in LED_POSITIONS]
+print(LED_POSITIONS)
+'''
+
+LED_POSITIONS = [[255, 128], [191, 237], [64, 237], [1, 128], [64, 18], [191, 18]]
 
 '''
 if __name__ == "__main__":
@@ -131,8 +135,9 @@ if __name__ == "__main__":
     while True:
         for t in range(255):
             param = TrackParam()
+            param.detune = 127
             track_point = get_track_point(t, param)
             led_value = [
-                max(0, min(1, 2 - euclid(track_point, led_point))) * 120 for led_point in LED_POSITIONS]
+                max(0, min(120, (10000 - euclid(track_point, led_point))/100)) for led_point in LED_POSITIONS]
             draw_scene(led_value)
             sleep(0.05)
