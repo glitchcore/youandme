@@ -34,6 +34,9 @@ typedef enum {
     LedCount
 } LedColor;
 
+#define TWO
+
+#ifdef ONE
 const uint8_t led_ddr[LedCount] = {
     LED_2 | LED_1,
     LED_2 | LED_1,
@@ -51,6 +54,28 @@ const uint8_t led_port[LedCount] = {
     LED_0,
     LED_1
 };
+#endif
+
+#ifdef TWO
+const uint8_t led_ddr[LedCount] = {
+    LED_2 | LED_0, // red0
+    LED_2 | LED_0, // green0
+    LED_2 | LED_1, // blue0
+    LED_2 | LED_1, // yellow
+    LED_1 | LED_0, // green1
+    LED_1 | LED_0, // blue1
+};
+
+const uint8_t led_port[LedCount] = {
+    LED_2, // red0
+    LED_0, // green0
+    LED_1, // blue0
+    LED_2, // yellow
+    LED_0, // green1
+    LED_1, // blue1
+};
+#endif
+
 
 uint8_t ddr_a = 0;
 uint8_t port_a = 0;
@@ -164,8 +189,8 @@ int main() {
 
     TIMSK |= (1 << TOIE1) | (1 << TOIE0) | (1 << OCIE0A) | (1 << OCIE0B);
 
-    MCUCR = (1 << SE) | (0 << SM1) | (0 << SM0); // (1 << BODS)
-    // PRR = (1 << PRTIM0) | (1 << PRUSI) | (1 << PRADC);
+    MCUCR = (1 << SE) | (0 << SM1) | (0 << SM0);
+    PRR = (1 << PRUSI) | (1 << PRADC);
 
     sei();
 
@@ -178,33 +203,40 @@ int main() {
         Green0
     };
 
-    set_led_a(Green1, 0);
+    set_led_a(Blue1, 0);
     set_led_b(Red0, 0);
 
     next_time = get_time() + 1;
 
     while(1) {
-        if(run) {
+        /*if(run) {
             set_led_a((get_time()/8) % LedCount, 120);
             _delay_ms(100);
             set_led_a(Red0, 0);
             set_led_b(Red0, 0);
 
             next_time = get_time() + 8;
-            run = false;
+            // run = false;
         } else {
+            DDRB = 0;
+            PORTB = 0xFF;
             __asm("sleep");
         }
-        /*for(uint8_t color = 0; color < LedCount; color++) {
+        */
+
+        for(uint8_t color = 0; color < LedCount; color++) {
             uint8_t color_a = color % LedCount;
             uint8_t color_b = (color + 1) % LedCount;
 
+            set_led_a(color_b, 120);
+            set_led_b(color_b, 120);
+
             for(uint8_t i = 0; i < 120; i++) {
-                set_led_a(color_a, 120 - i);
-                set_led_b(color_b, i);
-                _delay_ms(1);
+                // set_led_a(color_a, 120);
+                // set_led_b(color_b, 120);
+                _delay_ms(5);
             }
-        }*/
+        }
         
         /*set_led_a(Yellow, 120);
         set_led_b(Red0, 30);
