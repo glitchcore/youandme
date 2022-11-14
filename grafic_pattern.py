@@ -51,7 +51,24 @@ def next_seance_init():
     """
     pass
 
+def get_track_point(p):
+    return (sin(p) + 0.5, sin(p))
 
+def euclid(a, b):
+    return (a[0] - b[0])**2 + (a[1] - b[1])**2
+
+LED_RADIUS = 2
+
+LED_POSITIONS = [
+    [LED_RADIUS, 0],
+    [cos(radians(60)) * LED_RADIUS, sin(radians(60)) * LED_RADIUS],
+    [- cos(radians(60)) * LED_RADIUS, sin(radians(60)) * LED_RADIUS],
+    [- LED_RADIUS, 0],
+    [- cos(radians(60)) * LED_RADIUS, - sin(radians(60)) * LED_RADIUS],
+    [cos(radians(60)) * LED_RADIUS, - sin(radians(60)) * LED_RADIUS],
+]
+
+'''
 if __name__ == "__main__":
     # от 0 до 120
     led_value = [120, 40, 20, 30, 70, 65]
@@ -69,3 +86,13 @@ if __name__ == "__main__":
         sleep(TIME_BASE * real_delay)
 
     next_seance_init(KEY)
+'''
+
+if __name__ == "__main__":
+    while True:
+        for t in range(0, 100):
+            track_point = get_track_point(t * 2 * pi / 100)
+            led_value = [
+                max(0, min(1, 2 - euclid(track_point, led_point))) * 120 for led_point in LED_POSITIONS]
+            draw_scene(led_value)
+            sleep(0.02)
