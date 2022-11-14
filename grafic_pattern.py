@@ -5,15 +5,14 @@ from math import *
 from grafic_emulate import draw_scene
 
 TIME_BASE = 0.1
-TIME_FOR_SEANS = 10 * 60 * TIME_BASE
-
-GLOBAL_DELAY = 0
-GLOBAL_COLORS = [0, 0, 0, 0, 0, 0]
+time_for_seance = 10 * 60 * TIME_BASE
+time_befor_next_lighting = 5 * 60 *TIME_BASE
 
 
 def make_format(value, min_val=1, max_val=31):
     """
     типа договорились, что макс и мин - на 1 меньше степени двойки
+    TODO: нужно будет переделать нормально
     """
     return (value & max_val) + min_val
 
@@ -39,6 +38,20 @@ def get_leds(key, prev_led_value):
     return new_leds
 
 
+def next_seance_init():
+    """
+    TODO: планирую тут написать мега-логику по рассчёту параметров следующего сеанса
+
+    1 - номара диодов, которые будут задействованы
+    2 - время до следующего мигания (time_befor_next_lighting)
+    3 - ...
+
+
+    возможно, нужно будет что-то вынести в глобальные переменные (delsy, e.t.c)
+    """
+    pass
+
+
 if __name__ == "__main__":
     # от 0 до 120
     led_value = [120, 40, 20, 30, 70, 65]
@@ -46,10 +59,7 @@ if __name__ == "__main__":
     time_start = time()
     delay = 0
 
-    # while True:
-    #     delay = get_delay(KEY, delay)
-
-    while time() - time_start < TIME_FOR_SEANS:
+    while time() - time_start < time_for_seance:
         led_value = get_leds(KEY, led_value)
         real_led_value = [make_format(led, 0, 127) for led in led_value]
         print(real_led_value)
@@ -58,6 +68,4 @@ if __name__ == "__main__":
         real_delay = make_format(delay, min_val=1, max_val=31)
         sleep(TIME_BASE * real_delay)
 
-# while True:
-#     led_value[0] = 120 * (0.5 + sin(time()) * 0.5)
-#     draw_scene(led_value)
+    next_seance_init(KEY)
