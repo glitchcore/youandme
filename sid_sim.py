@@ -4,11 +4,11 @@ import threading
 
 pin_pulls = [False, False]
 
-
+# чтение пина
 def read_pin():
     return int(pin_pulls[0] or pin_pulls[1])
 
-
+# передача 0 или 1
 def pull_pin(n, pull):
     global pin_pulls
     pin_pulls[n] = pull
@@ -25,7 +25,7 @@ def checkin(n, status):
 TIME_BASE = 0.002
 
 MIN_LEN_ACTIVE_SIGNAL = 4
-
+ONE_BIT_LENGTH = 4 * TIME_BASE
 
 def is_get_master_signal(pin_states):
     result = False
@@ -70,9 +70,10 @@ def actor(*args):
                 diffs.append(abs(prev - i))
                 prev = i
             print(n, "diffs:", diffs)
-            if sum(diffs) > 7:
+            if sum(diffs) >= 7:
                 print(n, "get master role")
                 checkin(n, 1)
+                # отправляем ключ
                 break
 
         else:
@@ -94,6 +95,8 @@ def actor(*args):
                     pull_pin(n, False)
                     sleep(TIME_BASE * 2)
                 checkin(n, 0)
+
+                # ждём ключ
                 break
         sleep(random() * TIME_BASE * 3)
 
