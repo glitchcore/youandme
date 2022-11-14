@@ -80,12 +80,12 @@ class TrackParam:
         self.x = 0
         self.y = 0
         self.phase_x = 0
-        self.phase_y = 1.5
+        self.phase_y = 64
         
 def get_track_point(p, param):
     return (
-        param.a_x * (fastest_sin(255 * (p * param.detune + param.phase_x) / (2*pi)) - 127) / 127 + param.x,
-        param.a_y * (fastest_sin(255 * (p * (MAX_DETUNE - param.detune) + param.phase_y) / (2*pi)) - 127) / 127 + param.y
+        param.a_x * (fastest_sin(p * param.detune + param.phase_x) - 127) / 127 + param.x,
+        param.a_y * (fastest_sin(p * (MAX_DETUNE - param.detune) + param.phase_y) - 127) / 127 + param.y
     )
 
 def euclid(a, b):
@@ -129,9 +129,9 @@ if __name__ == "__main__":
 
 if __name__ == "__main__":
     while True:
-        for t in range(0, 100):
+        for t in range(255):
             param = TrackParam()
-            track_point = get_track_point(t * 2 * pi / 100, param)
+            track_point = get_track_point(t, param)
             led_value = [
                 max(0, min(1, 2 - euclid(track_point, led_point))) * 120 for led_point in LED_POSITIONS]
             draw_scene(led_value)
