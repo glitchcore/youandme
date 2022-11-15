@@ -27,32 +27,6 @@ def lfsr_random(prev):
     prev = ((prev << 1) + prev) & 0xFFFFFFFF
     return prev
 
-
-def get_delay(key, prev_delay):
-    new_delay = me_random(key + prev_delay)
-    return new_delay
-
-
-def get_leds(key, prev_led_value):
-    new_leds = [
-        me_random(led + key) for led in prev_led_value
-    ]
-    return new_leds
-
-
-def next_seance_init():
-    """
-    планирую тут написать мега-логику по рассчёту параметров следующего сеанса
-
-    1 - номара диодов, которые будут задействованы
-    2 - время до следующего мигания (time_befor_next_lighting)
-    3 - ...
-
-
-    возможно, нужно будет что-то вынести в глобальные переменные (delsy, e.t.c)
-    """
-    pass
-
 SIN_TABLE = [ 127, 130, 133, 136, 139, 142, 145, 148, 151, 154, 157, 160, 163,
 166, 169, 172, 175, 178, 181, 184, 186, 189, 192, 194, 197, 200, 202, 205, 207,
 209, 212, 214, 216, 218, 221, 223, 225, 227, 229, 230, 232, 234, 235, 237, 239,
@@ -130,8 +104,6 @@ def find_led_pair(led_value):
 
     return pair
 
-
-
 INTERPOLATION_SIZE = 16
 
 time_start = time()
@@ -189,9 +161,9 @@ if __name__ == "__main__":
         t = get_time()
 
         # only for emulation
-        track_point = get_track_point(get_time_f() * 4, param)
+        track_point = get_track_point(get_time_f() * 16, param)
 
-        interpolation_step = int((t * 4) / INTERPOLATION_SIZE) % INTERPOLATION_SIZE
+        interpolation_step = int((t * 16) / INTERPOLATION_SIZE) % INTERPOLATION_SIZE
         led_pair = ancors[interpolation_step]
         
         print(f"{led_pair[0].color}={led_pair[0].value}, {led_pair[1].color}={led_pair[1].value}")
