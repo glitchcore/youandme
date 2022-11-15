@@ -10,7 +10,8 @@ window.fill(0)
 pic = pygame.surface.Surface((WIDTH, HEIGHT))
 
 
-def draw_scene(led_value):
+def draw_scene(led_value, track_point):
+    print(track_point)
     DOT_SIZE = 0.3
     RADIUS = 0.2
 
@@ -80,6 +81,9 @@ def draw_scene(led_value):
             for pos, color, value in zip(POSITIONS, LEDS, led_value):
                 a = circle(pos, [x, y], DOT_SIZE) * min(1, max(value / 120, 0))
                 out = add(out, mult(color, a))
+
+            a = circle(track_point, [x, y], 0.1) * 10
+            out = add(out, mult([1,1,1], a))
 
             out = normalize_out(out)
             pic.set_at((i, j), tuple(out))

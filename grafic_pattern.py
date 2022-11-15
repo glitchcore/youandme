@@ -74,18 +74,17 @@ MAX_DETUNE = 255
 
 class TrackParam:
     def __init__(self):
-        self.a_x = 255
+        self.a_x = 0
         self.a_y = 255
-        self.detune = MAX_DETUNE/2
         self.x = 127
-        self.y = 0
+        self.y = 127
         self.phase_x = 0
         self.phase_y = 64
         
 def get_track_point(p, param):
     return (
-        param.a_x * (fastest_sin(p * param.detune / 64 + param.phase_x)) / 255 + param.x,
-        param.a_y * (fastest_sin(p * (MAX_DETUNE - param.detune) / 64 + param.phase_y)) / 255 + param.y
+        param.a_x * (fastest_sin(p + param.phase_x) - 127) / 255 + param.x,
+        param.a_y * (fastest_sin(p + param.phase_y) - 127) / 255 + param.y
     )
 
 def euclid(a, b):
@@ -135,9 +134,8 @@ if __name__ == "__main__":
     while True:
         for t in range(255):
             param = TrackParam()
-            param.detune = 127
-            track_point = get_track_point(t, param)
+            track_point = get_track_point(t * 4, param)
             led_value = [
                 max(0, min(120, (10000 - euclid(track_point, led_point))/100)) for led_point in LED_POSITIONS]
-            draw_scene(led_value)
+            draw_scene(led_value, [(v/255 - 0.5) * 0.4 for v in track_point])
             sleep(0.05)
