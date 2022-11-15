@@ -4,26 +4,28 @@ from math import *
 
 from grafic_emulate import draw_scene
 
+# API
+
+def set_ab(a, b, track_point):
+    drawing_led_value = [0] * 6
+    drawing_led_value[a.color] = a.value
+    drawing_led_value[b.color] = b.value
+    draw_scene(drawing_led_value, [(v/255 - 0.5) * 0.4 for v in track_point])
+
+def _delay_ms(a):
+    sleep(a / 1000)
+
+
 TIME_BASE = 0.1
 time_for_seance = 10 * 60 * TIME_BASE
 time_befor_next_lighting = 5 * 60 *TIME_BASE
 
-
-def make_format(value, min_val=1, max_val=31):
-    """
-    типа договорились, что макс и мин - на 1 меньше степени двойки
-    ! нужно будет переделать нормально
-    """
-    return (value & max_val) + min_val
-
-
-def me_random(number):
+SEED = 0xDEADBEEF # seed is here
+def lfsr_random(prev):
     # 13 ^ 7 ^ 3
-    result = number
-    for _ in range(4):
-        increment = ((result >> 3) & 1) ^ ((result >> 7) & 1) ^ ((result >> 13) & 1)
-        result = (result << 1) + increment
-    return result & 32767
+    increment = ((prev >> 3) & 1) ^ ((prev >> 7) & 1) ^ ((prev >> 13) & 1)
+    prev = ((prev << 1) + prev) & 0xFFFFFFFF
+    return prev
 
 
 def get_delay(key, prev_delay):
@@ -82,11 +84,12 @@ class TrackParam:
         self.y = 127
         self.phase = 60
 
-    def update(self):
-        self.rot = [
-            fastest_cos(self.angle), -fastest_sin(self.angle),
-            fastest_sin(self.angle), fastest_cos(self.angle)
-        ]
+
+def update_param(param):
+    param.rot = [
+        fastest_cos(param.angle), -fastest_sin(param.angle),
+        fastest_sin(param.angle), fastest_cos(param.angle)
+    ]
         
         
 def get_track_point(p, param):
@@ -127,11 +130,7 @@ def find_led_pair(led_value):
 
     return pair
 
-def set_ab(a, b, track_point):
-    drawing_led_value = [0] * 6
-    drawing_led_value[a.color] = a.value
-    drawing_led_value[b.color] = b.value
-    draw_scene(drawing_led_value, [(v/255 - 0.5) * 0.4 for v in track_point])
+
 
 INTERPOLATION_SIZE = 16
 
@@ -140,9 +139,6 @@ def get_time():
     return int(time() - time_start)
 def get_time_f():
     return time() - time_start
-
-def _delay_ms(a):
-    sleep(a / 1000)
 
 def blink(led_pair, timestep, track_point):
     blink_max = max(led_pair[0].value, led_pair[1].value)
@@ -165,10 +161,22 @@ def blink(led_pair, timestep, track_point):
         _delay_ms(timestep)
 
 if __name__ == "__main__":
-    
-
+    global_random = SEED
     param = TrackParam()
-    param.update()
+    global_random = lfsr_random(global_random)
+    param.angle = global_random & 0xFF
+    global_random = lfsr_random(global_random)
+    param.phase = global_random & 0xFF
+    global_random = lfsr_random(global_random)
+    param.x = global_random & 0xFF
+    global_random = lfsr_random(global_random)
+    param.y = global_random & 0xFF
+    update_param(param)
+
+    global_random = lfsr_random(global_random)
+    delay_seed = global_random
+    global_random = lfsr_random(global_random)
+    next_delay = global_random
 
     ancors = [0] * INTERPOLATION_SIZE
     for t in range(INTERPOLATION_SIZE):
@@ -176,8 +184,6 @@ if __name__ == "__main__":
         led_value = [
                 int(max(0, min(120, (10000 - euclid(track_point, led_point))/64))) for led_point in LED_POSITIONS]
         ancors[t] = find_led_pair(led_value)
-
-
 
     while True:
         t = get_time()
@@ -191,7 +197,9 @@ if __name__ == "__main__":
         print(f"{led_pair[0].color}={led_pair[0].value}, {led_pair[1].color}={led_pair[1].value}")
 
         # set_a, set_b
-        blink(led_pair, 1, track_point)
+        blink(led_pair, 0, track_point)
+
+        _delay_ms(100)
 
 '''
 if __name__ == "__main__":

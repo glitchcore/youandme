@@ -2,8 +2,8 @@ from math import *
 import pygame
 
 pygame.init()
-WIDTH = 50
-HEIGHT = 50
+WIDTH = 10
+HEIGHT = 10
 window = pygame.display.set_mode((500, 500))
 window.fill(0)
 
