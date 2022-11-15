@@ -68,26 +68,33 @@ SIN_TABLE = [ 127, 130, 133, 136, 139, 142, 145, 148, 151, 154, 157, 160, 163,
 105, 108, 111, 114, 117, 120, 123,] 
 
 def fastest_sin(x):
-    return SIN_TABLE[int(x) % 256]
+    return SIN_TABLE[int(x) % 256] - 127
+
+def fastest_cos(x):
+    return fastest_sin(x + 64)
 
 class TrackParam:
     def __init__(self):
-        self.angle = 0
+        self.angle = 50
         self.a_x = 0
         self.a_y = 0
         self.x = 127
         self.y = 127
-        self.phase = 255
+        self.phase = 60
 
     def update(self):
-        self.a_x = 127 # fastest_sin(self.angle) - 127
-        self.a_y = 127 # fastest_sin(self.angle + 64) - 127
+        self.rot = [
+            fastest_cos(self.angle), -fastest_sin(self.angle),
+            fastest_sin(self.angle), fastest_cos(self.angle)
+        ]
         
         
 def get_track_point(p, param):
+    x = fastest_sin(p + param.phase / 4)
+    y = fastest_sin(p)
     return (
-        param.a_x * (fastest_sin(p + param.phase / 4) - 127) / 127 + param.x,
-        param.a_y * (fastest_sin(p) - 127) / 127 + param.y
+        param.rot[0] * x / 127 + param.rot[1] * y / 127 + param.x,
+        param.rot[2] * x / 127 + param.rot[3] * y / 127 + param.y
     )
 
 def euclid(a, b):
@@ -120,19 +127,30 @@ def find_led_pair(led_value):
 
     return pair
 
+INTERPOLATION_SIZE = 16
+
 if __name__ == "__main__":
     param = TrackParam()
-    param.angle = 0
     param.update()
+
+    ancors = [0] * INTERPOLATION_SIZE
+    for t in range(INTERPOLATION_SIZE):
+        track_point = get_track_point(t * 255 / INTERPOLATION_SIZE, param)
+        led_value = [
+                max(0, min(120, (10000 - euclid(track_point, led_point))/64)) for led_point in LED_POSITIONS]
+        ancors[t] = find_led_pair(led_value)
+
+
 
     while True:
         for t in range(255):
+            # only for emulation
             track_point = get_track_point(t * 4, param)
-            led_value = [
-                max(0, min(120, (10000 - euclid(track_point, led_point))/64)) for led_point in LED_POSITIONS]
+
+            interpolation_step = int((t * 4) / INTERPOLATION_SIZE) % INTERPOLATION_SIZE
+            led_pair = ancors[interpolation_step]
             
-            led_pair = find_led_pair(led_value)
-            # print(led_value, f"{led_pair[0].color}={led_pair[0].value}, {led_pair[1].color}={led_pair[1].value}")
+            print(f"{led_pair[0].color}={led_pair[0].value}, {led_pair[1].color}={led_pair[1].value}")
 
             # set_a, set_b
             drawing_led_value = [0] * 6
