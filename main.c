@@ -8,6 +8,8 @@
 #include <avr/interrupt.h>
 #include <avr/wdt.h>
 
+#include "pattern.c"
+
 #define LED_0 (1<<PB0)
 #define LED_1 (1<<PB1)
 #define LED_2 (1<<PB2)
@@ -20,7 +22,6 @@
 #define POWER_IDLE ~(1<<SM1)
 #define POWER_DOWN (1<<SM1)
 
-volatile uint32_t time = 0;
 uint16_t seed = 0xDEAD;
 
 typedef enum {
@@ -34,7 +35,8 @@ typedef enum {
     LedCount
 } LedColor;
 
-#define TWO
+#define ONE
+// #define TWO
 
 #ifdef ONE
 const uint8_t led_ddr[LedCount] = {
@@ -82,6 +84,7 @@ uint8_t port_a = 0;
 uint8_t ddr_b = 0;
 uint8_t port_b = 0;
 
+volatile uint32_t time = 0;
 uint32_t get_time() {
     // get time base + timer offset (32 ticks per second)
     return time + TCNT1 / 32;
@@ -122,8 +125,8 @@ ISR(TIM0_COMPB_vect) {
 uint8_t a_value = 0;
 uint8_t b_value = 0;
 
-const uint8_t LOW_MARGIN = 30;
-const uint8_t HIGH_MARGIN = 100;
+const uint8_t LOW_MARGIN = 4;
+const uint8_t HIGH_MARGIN = 120;
 
 void set_led_a(LedColor color, uint8_t value) {
     if(value > HIGH_MARGIN) value = HIGH_MARGIN;
@@ -178,6 +181,41 @@ void set_led_b(LedColor color, uint8_t value) {
     }
 }
 
+const uint8_t HALF_DELAY = 16;
+
+void blink(LedPair* pair, uint32_t timestep) {
+    uint8_t blink_max = MAX(pair->a.value, pair->b.value);
+    uint8_t step = timestep <= HALF_DELAY ? HALF_DELAY - timestep : 1;
+
+    for(uint8_t i = LOW_MARGIN; i < blink_max; i += step) {
+        uint8_t x = i;
+        set_led_a(pair->a.color, MIN(x, pair->a.value));
+        set_led_b(pair->b.color, MIN(x, pair->b.value));
+        if(timestep > HALF_DELAY) {
+            for(uint8_t t = 0; t < (timestep - HALF_DELAY); t++) {
+                _delay_ms(1);
+            }
+        } else {
+            _delay_ms(1);
+        }
+    }
+    for(uint8_t i = 0; i < blink_max - LOW_MARGIN; i += step) {
+        uint8_t x = blink_max - i;
+        set_led_a(pair->a.color, MIN(x, pair->a.value));
+        set_led_b(pair->b.color, MIN(x, pair->b.value));
+        if(timestep > HALF_DELAY) {
+            for(uint8_t t = 0; t < (timestep - HALF_DELAY); t++) {
+                _delay_ms(1);
+            }
+        } else {
+            _delay_ms(1);
+        }
+    }
+
+    set_led_a(0, 0);
+    set_led_b(0, 0);
+}
+
 int main() {
     PLLCSR &= ~(1 << PCKE);
     TCCR1 |= (1 << CS13) | (0 << CS12) | (1 << CS11) | (1 << CS10);
@@ -208,7 +246,74 @@ int main() {
 
     next_time = get_time() + 1;
 
+    LedPair ancors[INTERPOLATION_SIZE];
+
+    uint32_t global_random = SEED;
+
+    TrackParam param;
+
     while(1) {
+        if(run) {
+            global_random = lfsr_random(global_random);
+            param.angle = global_random & 0xFF;
+
+            global_random = lfsr_random(global_random);
+            param.phase = global_random & 0xFF;
+
+            global_random = lfsr_random(global_random);
+            param.x = global_random & 0xFF;
+
+            global_random = lfsr_random(global_random);
+            param.y = global_random & 0xFF;
+
+            global_random = lfsr_random(global_random);
+            uint32_t sequence_random = global_random;
+
+            // set next time
+            global_random = lfsr_random(global_random);
+            next_time = get_time() + (30 + (global_random & 31));
+
+            update_param(&param);
+
+            create_ancors(ancors, &param);
+
+            uint32_t sequence_begin_time = get_time();
+            uint32_t sequence_time = 60;
+
+            while(get_time() - sequence_begin_time < sequence_time) {
+                uint8_t interpolation_step = (get_time() * 3) % INTERPOLATION_SIZE;
+
+                sequence_random = lfsr_random(sequence_random);
+                blink(&ancors[interpolation_step], sequence_random & 31);
+
+                sequence_random = lfsr_random(sequence_random);
+                for(uint8_t i = 0; i < (sequence_random & 127); i++) {
+                    _delay_ms(1);
+                }
+            }
+
+            run = false;
+        } else {
+            DDRB = 0;
+            PORTB = 0xFF;
+            __asm("sleep");
+        }
+
+        /*
+        set_led_a(Red0, 120);
+        _delay_ms(100);
+        set_led_a(Red0, 0);
+        */
+
+        /*for(uint8_t k = 0; k < 10; k++) {
+
+            for(uint8_t t = 0; t < INTERPOLATION_SIZE; t++) {
+                set_led_a(ancors[t].a.color, ancors[t].a.value);
+                set_led_b(ancors[t].b.color, ancors[t].b.value);
+                _delay_ms(100);
+                // printf("[%d = %d, %d=%d], ", ancors[t].a.color, ancors[t].a.value, ancors[t].b.color, ancors[t].b.value);
+            }
+        }*/
         /*if(run) {
             set_led_a((get_time()/8) % LedCount, 120);
             _delay_ms(100);
@@ -218,13 +323,11 @@ int main() {
             next_time = get_time() + 8;
             // run = false;
         } else {
-            DDRB = 0;
-            PORTB = 0xFF;
-            __asm("sleep");
+            
         }
         */
 
-        for(uint8_t color = 0; color < LedCount; color++) {
+        /*for(uint8_t color = 0; color < LedCount; color++) {
             uint8_t color_a = color % LedCount;
             uint8_t color_b = (color + 1) % LedCount;
 
@@ -236,7 +339,7 @@ int main() {
                 // set_led_b(color_b, 120);
                 _delay_ms(5);
             }
-        }
+        }*/
         
         /*set_led_a(Yellow, 120);
         set_led_b(Red0, 30);

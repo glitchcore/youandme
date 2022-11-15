@@ -15,6 +15,7 @@ def set_ab(a, b, track_point):
 def _delay_ms(a):
     sleep(a / 1000)
 
+PHASE_DECIMATOR = 8
 
 TIME_BASE = 0.1
 time_for_seance = 10 * 60 * TIME_BASE
@@ -24,7 +25,7 @@ SEED = 0xDEADBEEF # seed is here
 def lfsr_random(prev):
     # 13 ^ 7 ^ 3
     increment = ((prev >> 3) & 1) ^ ((prev >> 7) & 1) ^ ((prev >> 13) & 1)
-    prev = ((prev << 1) + prev) & 0xFFFFFFFF
+    prev = ((prev << 1) + increment) & 0xFFFFFFFF
     return prev
 
 SIN_TABLE = [ 127, 130, 133, 136, 139, 142, 145, 148, 151, 154, 157, 160, 163,
@@ -67,18 +68,23 @@ def update_param(param):
         
         
 def get_track_point(p, param):
-    x = fastest_sin(p + param.phase / 4)
+    x = fastest_sin(p + param.phase / PHASE_DECIMATOR)
     y = fastest_sin(p)
-    return (
-        param.rot[0] * x / 127 + param.rot[1] * y / 127 + param.x,
-        param.rot[2] * x / 127 + param.rot[3] * y / 127 + param.y
+
+    res = (
+        int(param.rot[0] * x / 127 + param.rot[1] * y / 127 + param.x),
+        int(param.rot[2] * x / 127 + param.rot[3] * y / 127 + param.y)
     )
+
+    # print(p, x, y, res)
+
+    return res
 
 def euclid(a, b):
     dx = a[0] - b[0]
     dy = a[1] - b[1]
     res = dx * dx + dy * dy
-    # print(res)
+    # print(dx, dy, res)
     return res
 
 LED_POSITIONS = [[255, 128], [191, 237], [64, 237], [1, 128], [64, 18], [191, 18]]
@@ -135,38 +141,50 @@ def blink(led_pair, timestep, track_point):
 if __name__ == "__main__":
     global_random = SEED
     param = TrackParam()
-    global_random = lfsr_random(global_random)
-    param.angle = global_random & 0xFF
-    global_random = lfsr_random(global_random)
-    param.phase = global_random & 0xFF
-    global_random = lfsr_random(global_random)
-    param.x = global_random & 0xFF
-    global_random = lfsr_random(global_random)
-    param.y = global_random & 0xFF
-    update_param(param)
 
+    # print(param.rot)
+
+    '''
     global_random = lfsr_random(global_random)
     delay_seed = global_random
     global_random = lfsr_random(global_random)
     next_delay = global_random
+    '''
 
-    ancors = [0] * INTERPOLATION_SIZE
-    for t in range(INTERPOLATION_SIZE):
-        track_point = get_track_point(t * 255 / INTERPOLATION_SIZE, param)
-        led_value = [
-                int(max(0, min(120, (10000 - euclid(track_point, led_point))/64))) for led_point in LED_POSITIONS]
-        ancors[t] = find_led_pair(led_value)
+    
+
+    # print([[f"{led.color} = {led.value}" for led in ancor] for ancor in ancors])
 
     while True:
-        t = get_time()
+        global_random = lfsr_random(global_random)
+        param.angle = global_random & 0xFF
+        global_random = lfsr_random(global_random)
+        param.phase = global_random & 0xFF
+        global_random = lfsr_random(global_random)
+        param.x = global_random & 0xFF
+        global_random = lfsr_random(global_random)
+        param.y = global_random & 0xFF
+        update_param(param)
 
-        # only for emulation
-        track_point = get_track_point(get_time_f() * 16, param)
+        ancors = [0] * INTERPOLATION_SIZE
+        for t in range(INTERPOLATION_SIZE):
+            track_point = get_track_point(int(t * 255 / INTERPOLATION_SIZE), param)
 
-        interpolation_step = int((t * 16) / INTERPOLATION_SIZE) % INTERPOLATION_SIZE
-        led_pair = ancors[interpolation_step]
+            led_value = [0] * 6
+            for i in range(6):
+                led_value[i] = int(max(0, min(120, (10000 - euclid(track_point, LED_POSITIONS[i]))/64)))
+
+            # print(led_value)
+            ancors[t] = find_led_pair(led_value)
         
-        print(f"{led_pair[0].color}={led_pair[0].value}, {led_pair[1].color}={led_pair[1].value}")
+
+        for t in range(INTERPOLATION_SIZE):
+            track_point = get_track_point(t, param)
+            interpolation_step = int(t % INTERPOLATION_SIZE)
+            led_pair = ancors[interpolation_step]
+            blink(led_pair, 0, track_point)
+        
+        # print(f"{led_pair[0].color}={led_pair[0].value}, {led_pair[1].color}={led_pair[1].value}")
 
         # set_a, set_b
         blink(led_pair, 0, track_point)
