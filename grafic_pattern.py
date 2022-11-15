@@ -74,12 +74,12 @@ MAX_DETUNE = 255
 
 class TrackParam:
     def __init__(self):
-        self.a_x = 0
+        self.a_x = 255
         self.a_y = 255
         self.x = 127
         self.y = 127
         self.phase_x = 0
-        self.phase_y = 64
+        self.phase_y = 0
         
 def get_track_point(p, param):
     return (
