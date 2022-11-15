@@ -35,10 +35,14 @@ typedef enum {
     LedCount
 } LedColor;
 
+uint32_t SEED = 0xDEADBEEF;
+
 #define ONE
 // #define TWO
 
 #ifdef ONE
+// uint32_t MY_SEED = 0x1010;
+uint32_t MY_SEED = 0x3588;
 const uint8_t led_ddr[LedCount] = {
     LED_2 | LED_1,
     LED_2 | LED_1,
@@ -59,6 +63,7 @@ const uint8_t led_port[LedCount] = {
 #endif
 
 #ifdef TWO
+uint32_t MY_SEED = 0x3588;
 const uint8_t led_ddr[LedCount] = {
     LED_2 | LED_0, // red0
     LED_2 | LED_0, // green0
@@ -252,6 +257,8 @@ int main() {
 
     TrackParam param;
 
+    uint32_t sequence_counter = 0;
+
     while(1) {
         if(run) {
             global_random = lfsr_random(global_random);
@@ -267,27 +274,36 @@ int main() {
             param.y = global_random & 0xFF;
 
             global_random = lfsr_random(global_random);
-            uint32_t sequence_random = global_random;
+            uint32_t sequence_random = global_random + MY_SEED;
 
             // set next time
             global_random = lfsr_random(global_random);
-            next_time = get_time() + (30 + (global_random & 31));
+            next_time = get_time() + (60 + (global_random & (sequence_counter < 10 ? 63 : 4095)));
+            uint32_t sequence_time = sequence_counter < 10 ? 60 : 600;
+            sequence_counter++;
+
+            global_random = lfsr_random(global_random);
+            bool speed = global_random & 1;
 
             update_param(&param);
 
             create_ancors(ancors, &param);
 
             uint32_t sequence_begin_time = get_time();
-            uint32_t sequence_time = 60;
+
+            uint8_t steps = 0;
 
             while(get_time() - sequence_begin_time < sequence_time) {
-                uint8_t interpolation_step = (get_time() * 3) % INTERPOLATION_SIZE;
+                sequence_random = lfsr_random(sequence_random);
+                steps += sequence_random & (speed ? 1 : 3);
+
+                uint8_t interpolation_step = steps % INTERPOLATION_SIZE;
 
                 sequence_random = lfsr_random(sequence_random);
-                blink(&ancors[interpolation_step], sequence_random & 31);
+                blink(&ancors[interpolation_step], sequence_random & (speed ? 7 : 31));
 
                 sequence_random = lfsr_random(sequence_random);
-                for(uint8_t i = 0; i < (sequence_random & 127); i++) {
+                for(uint16_t i = 0; i < (sequence_random & (speed ? 31 : 512)); i++) {
                     _delay_ms(1);
                 }
             }

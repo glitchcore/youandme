@@ -4,9 +4,8 @@
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 
-const int16_t PHASE_DECIMATOR = 8;
+const int16_t PHASE_DECIMATOR = 256;
 
-uint32_t SEED = 0xDEADBEEF;
 uint32_t lfsr_random(uint32_t prev) {
     // 13 ^ 7 ^ 3
     uint8_t increment = ((prev >> 3) & 1) ^ ((prev >> 7) & 1) ^ ((prev >> 13) & 1);
