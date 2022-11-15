@@ -11,7 +11,7 @@ pic = pygame.surface.Surface((WIDTH, HEIGHT))
 
 
 def draw_scene(led_value, track_point):
-    print(track_point)
+    # print(track_point)
     DOT_SIZE = 0.3
     RADIUS = 0.2
 

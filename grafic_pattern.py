@@ -70,45 +70,77 @@ SIN_TABLE = [ 127, 130, 133, 136, 139, 142, 145, 148, 151, 154, 157, 160, 163,
 def fastest_sin(x):
     return SIN_TABLE[int(x) % 256]
 
-MAX_DETUNE = 255
-
 class TrackParam:
     def __init__(self):
-        self.a_x = 255
-        self.a_y = 255
+        self.angle = 0
+        self.a_x = 0
+        self.a_y = 0
         self.x = 127
         self.y = 127
-        self.phase_x = 0
-        self.phase_y = 0
+        self.phase = 255
+
+    def update(self):
+        self.a_x = 127 # fastest_sin(self.angle) - 127
+        self.a_y = 127 # fastest_sin(self.angle + 64) - 127
+        
         
 def get_track_point(p, param):
     return (
-        param.a_x * (fastest_sin(p + param.phase_x) - 127) / 255 + param.x,
-        param.a_y * (fastest_sin(p + param.phase_y) - 127) / 255 + param.y
+        param.a_x * (fastest_sin(p + param.phase / 4) - 127) / 127 + param.x,
+        param.a_y * (fastest_sin(p) - 127) / 127 + param.y
     )
 
 def euclid(a, b):
-    res = (a[0] - b[0])**2 + (a[1] - b[1])**2
+    dx = a[0] - b[0]
+    dy = a[1] - b[1]
+    res = dx * dx + dy * dy
     # print(res)
     return res
 
-'''
-LED_RADIUS = 127
-
-LED_POSITIONS = [
-    [LED_RADIUS, 0],
-    [cos(radians(60)) * LED_RADIUS, sin(radians(60)) * LED_RADIUS],
-    [- cos(radians(60)) * LED_RADIUS, sin(radians(60)) * LED_RADIUS],
-    [- LED_RADIUS, 0],
-    [- cos(radians(60)) * LED_RADIUS, - sin(radians(60)) * LED_RADIUS],
-    [cos(radians(60)) * LED_RADIUS, - sin(radians(60)) * LED_RADIUS],
-]
-
-LED_POSITIONS = [[int(x[0] + 128), int(x[1] + 128)] for x in LED_POSITIONS]
-print(LED_POSITIONS)
-'''
-
 LED_POSITIONS = [[255, 128], [191, 237], [64, 237], [1, 128], [64, 18], [191, 18]]
+
+class Led:
+    def __init__(self, color, value):
+        self.color = color
+        self.value = value
+
+def find_led_pair(led_value):
+    pair = [Led(0, 0), Led(0, 0)]
+
+    for i in range(6):
+        if led_value[i] > pair[0].value:
+            pair[1].value = pair[0].value
+            pair[1].color = pair[0].color
+
+            pair[0].value = led_value[i]
+            pair[0].color = i
+        elif led_value[i] > pair[1].value:
+            pair[1].value = led_value[i]
+            pair[1].color = i
+
+    return pair
+
+if __name__ == "__main__":
+    param = TrackParam()
+    param.angle = 0
+    param.update()
+
+    while True:
+        for t in range(255):
+            track_point = get_track_point(t * 4, param)
+            led_value = [
+                max(0, min(120, (10000 - euclid(track_point, led_point))/64)) for led_point in LED_POSITIONS]
+            
+            led_pair = find_led_pair(led_value)
+            # print(led_value, f"{led_pair[0].color}={led_pair[0].value}, {led_pair[1].color}={led_pair[1].value}")
+
+            # set_a, set_b
+            drawing_led_value = [0] * 6
+            drawing_led_value[led_pair[0].color] = led_pair[0].value
+            drawing_led_value[led_pair[1].color] = led_pair[1].value
+            draw_scene(drawing_led_value, [(v/255 - 0.5) * 0.4 for v in track_point])
+
+            sleep(0.05)
 
 '''
 if __name__ == "__main__":
@@ -130,12 +162,18 @@ if __name__ == "__main__":
     next_seance_init(KEY)
 '''
 
-if __name__ == "__main__":
-    while True:
-        for t in range(255):
-            param = TrackParam()
-            track_point = get_track_point(t * 4, param)
-            led_value = [
-                max(0, min(120, (10000 - euclid(track_point, led_point))/100)) for led_point in LED_POSITIONS]
-            draw_scene(led_value, [(v/255 - 0.5) * 0.4 for v in track_point])
-            sleep(0.05)
+'''
+LED_RADIUS = 127
+
+LED_POSITIONS = [
+    [LED_RADIUS, 0],
+    [cos(radians(60)) * LED_RADIUS, sin(radians(60)) * LED_RADIUS],
+    [- cos(radians(60)) * LED_RADIUS, sin(radians(60)) * LED_RADIUS],
+    [- LED_RADIUS, 0],
+    [- cos(radians(60)) * LED_RADIUS, - sin(radians(60)) * LED_RADIUS],
+    [cos(radians(60)) * LED_RADIUS, - sin(radians(60)) * LED_RADIUS],
+]
+
+LED_POSITIONS = [[int(x[0] + 128), int(x[1] + 128)] for x in LED_POSITIONS]
+print(LED_POSITIONS)
+'''
