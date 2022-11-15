@@ -127,9 +127,46 @@ def find_led_pair(led_value):
 
     return pair
 
+def set_ab(a, b, track_point):
+    drawing_led_value = [0] * 6
+    drawing_led_value[a.color] = a.value
+    drawing_led_value[b.color] = b.value
+    draw_scene(drawing_led_value, [(v/255 - 0.5) * 0.4 for v in track_point])
+
 INTERPOLATION_SIZE = 16
 
+time_start = time()
+def get_time():
+    return int(time() - time_start)
+def get_time_f():
+    return time() - time_start
+
+def _delay_ms(a):
+    sleep(a / 1000)
+
+def blink(led_pair, timestep, track_point):
+    blink_max = max(led_pair[0].value, led_pair[1].value)
+
+    for i in range(blink_max):
+        x = i
+        set_ab(
+            Led(led_pair[0].color, min(x, led_pair[0].value)),
+            Led(led_pair[1].color, min(x, led_pair[1].value)),
+            track_point
+        )
+        _delay_ms(timestep)
+    for i in range(blink_max):
+        x = blink_max - i
+        set_ab(
+            Led(led_pair[0].color, min(x, led_pair[0].value)),
+            Led(led_pair[1].color, min(x, led_pair[1].value)),
+            track_point
+        )
+        _delay_ms(timestep)
+
 if __name__ == "__main__":
+    
+
     param = TrackParam()
     param.update()
 
@@ -137,28 +174,24 @@ if __name__ == "__main__":
     for t in range(INTERPOLATION_SIZE):
         track_point = get_track_point(t * 255 / INTERPOLATION_SIZE, param)
         led_value = [
-                max(0, min(120, (10000 - euclid(track_point, led_point))/64)) for led_point in LED_POSITIONS]
+                int(max(0, min(120, (10000 - euclid(track_point, led_point))/64))) for led_point in LED_POSITIONS]
         ancors[t] = find_led_pair(led_value)
 
 
 
     while True:
-        for t in range(255):
-            # only for emulation
-            track_point = get_track_point(t * 4, param)
+        t = get_time()
 
-            interpolation_step = int((t * 4) / INTERPOLATION_SIZE) % INTERPOLATION_SIZE
-            led_pair = ancors[interpolation_step]
-            
-            print(f"{led_pair[0].color}={led_pair[0].value}, {led_pair[1].color}={led_pair[1].value}")
+        # only for emulation
+        track_point = get_track_point(get_time_f() * 4, param)
 
-            # set_a, set_b
-            drawing_led_value = [0] * 6
-            drawing_led_value[led_pair[0].color] = led_pair[0].value
-            drawing_led_value[led_pair[1].color] = led_pair[1].value
-            draw_scene(drawing_led_value, [(v/255 - 0.5) * 0.4 for v in track_point])
+        interpolation_step = int((t * 4) / INTERPOLATION_SIZE) % INTERPOLATION_SIZE
+        led_pair = ancors[interpolation_step]
+        
+        print(f"{led_pair[0].color}={led_pair[0].value}, {led_pair[1].color}={led_pair[1].value}")
 
-            sleep(0.05)
+        # set_a, set_b
+        blink(led_pair, 1, track_point)
 
 '''
 if __name__ == "__main__":
